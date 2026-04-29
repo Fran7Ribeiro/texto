@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mensagem Secreta — Gerador de Cartões</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;900&family=Righteous&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --surface2: #0f3460;
+    --accent: #e94560;
+    --accent2: #a855f7;
+    --text: #f0f0f0;
+    --text2: #a0a0c0;
+    --border: rgba(255,255,255,0.08);
+    --radius: 12px;
+  }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    background: linear-gradient(135deg, #0f3460, #16213e);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 28px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-shrink: 0;
+  }
+
+  header h1 {
+    font-family: 'Righteous', cursive;
+    font-size: 22px;
+    background: linear-gradient(90deg, #e94560, #a855f7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  header .badge {
+    background: rgba(233,69,96,0.15);
+    border: 1px solid rgba(233,69,96,0.4);
+    color: #e94560;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 999px;
+    letter-spacing: 1px;
+  }
+
+  .app {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    height: calc(100vh - 61px);
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 340px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 20px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-track { background: transparent; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 4px; }
+
+  .section {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+
+  .section-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--accent2);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .section-title::before {
+    content: '';
+    display: block;
+    width: 3px;
+    height: 12px;
+    background: var(--accent2);
+    border-radius: 2px;
+  }
+
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text2);
+    margin-bottom: 5px;
+  }
+
+  input[type="text"], textarea, select {
+    width: 100%;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Nunito', sans-serif;
+    font-size: 14px;
+    padding: 9px 12px;
+    outline: none;
+    transition: border-color 0.2s;
+    resize: none;
+  }
+
+  input[type="text"]:focus, textarea:focus, select:focus {
+    border-color: var(--accent2);
+  }
+
+  select option { background: #1a1a2e; }
+
+  textarea { height: 90px; line-height: 1.5; }
+
+  .field { margin-bottom: 12px; }
+  .field:last-child { margin-bottom: 0; }
+
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .color-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  input[type="color"] {
+    width: 40px;
+    height: 40px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    background: none;
+    padding: 2px;
+    flex-shrink: 0;
+  }
+
+  input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; border-radius: 5px; }
+  input[type="color"]::-webkit-color-swatch { border: none; border-radius: 5px; }
+
+  .color-hex {
+    font-size: 13px;
+    font-family: monospace;
+    color: var(--text2);
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    flex: 1;
+  }
+
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--accent2);
+    height: 4px;
+  }
+
+  .range-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .range-val {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent2);
+    min-width: 28px;
+    text-align: right;
+  }
+
+  /* Emoji preset chips */
+  .emoji-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .preset-chip {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--text2);
+  }
+
+  .preset-chip:hover { border-color: var(--accent2); color: var(--text); }
+  .preset-chip.active { background: rgba(168,85,247,0.2); border-color: var(--accent2); color: var(--text); }
+
+  /* Emoji map editor */
+  .emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+
+  .emoji-grid::-webkit-scrollbar { width: 3px; }
+  .emoji-grid::-webkit-scrollbar-thumb { background: var(--surface2); }
+
+  .emoji-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .emoji-cell span {
+    font-size: 10px;
+    color: var(--text2);
+    font-weight: 700;
+  }
+
+  .emoji-cell input {
+    width: 100%;
+    text-align: center;
+    font-size: 18px;
+    padding: 4px 2px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Nunito', sans-serif;
+  }
+
+  .btn {
+    width: 100%;
+    padding: 13px;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.5px;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #e94560, #c2185b);
+    color: white;
+    box-shadow: 0 4px 20px rgba(233,69,96,0.4);
+  }
+
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(233,69,96,0.5); }
+  .btn-primary:active { transform: scale(0.98); }
+
+  .btn-secondary {
+    background: rgba(168,85,247,0.15);
+    border: 1px solid rgba(168,85,247,0.4);
+    color: var(--accent2);
+    margin-top: 8px;
+  }
+
+  .btn-secondary:hover { background: rgba(168,85,247,0.25); }
+
+  .btn-format {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
+    color: var(--text);
+    padding: 12px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'Nunito', sans-serif;
+  }
+
+  .btn-format:hover {
+    background: rgba(233,69,96,0.15);
+    border-color: rgba(233,69,96,0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(233,69,96,0.25);
+  }
+
+  .btn-format:active { transform: scale(0.97); }
+
+  .btn-format-pdf {
+    background: rgba(168,85,247,0.1);
+    border-color: rgba(168,85,247,0.3);
+    flex-direction: row;
+    gap: 10px;
+    padding: 13px 16px;
+  }
+
+  .btn-format-pdf:hover {
+    background: rgba(168,85,247,0.2);
+    border-color: rgba(168,85,247,0.6);
+    box-shadow: 0 4px 16px rgba(168,85,247,0.3);
+  }
+
+  .fmt-icon { font-size: 22px; }
+  .fmt-label { font-size: 13px; font-weight: 800; }
+  .fmt-sub { font-size: 10px; color: var(--text2); }
+
+  /* ── EXPORT TOAST ── */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #1e1e3a;
+    border: 1px solid rgba(168,85,247,0.5);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s;
+    opacity: 0;
+    z-index: 9999;
+    pointer-events: none;
+  }
+
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+
+  /* ── PREVIEW AREA ── */
+  .preview-area {
+    flex: 1;
+    overflow: auto;
+    background: #111;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px;
+    gap: 16px;
+  }
+
+  .preview-area::-webkit-scrollbar { width: 6px; height: 6px; }
+  .preview-area::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+  .preview-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 8px 16px;
+    flex-shrink: 0;
+    width: 100%;
+    max-width: 640px;
+  }
+
+  .preview-toolbar span {
+    font-size: 12px;
+    color: #666;
+    flex: 1;
+  }
+
+  .zoom-btn {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #aaa;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+  }
+
+  .zoom-btn:hover { background: rgba(255,255,255,0.12); color: white; }
+
+  #canvas-wrap {
+    box-shadow: 0 8px 48px rgba(0,0,0,0.6);
+    border-radius: 4px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  canvas { display: block; }
+
+  .export-note {
+    font-size: 11px;
+    color: #555;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔐 Mensagem Secreta</h1>
+  <span class="badge">GERADOR A4</span>
+</header>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+
+    <div class="section">
+      <div class="section-title">Texto</div>
+      <div class="field">
+        <label>Título do cartão</label>
+        <input type="text" id="inp-title" value="MENSAGEM SECRETA" oninput="render()">
+      </div>
+      <div class="field">
+        <label>Mensagem secreta</label>
+        <textarea id="inp-message" oninput="render()">FOSTE CAPAZ DE DESCOBRIR</textarea>
+      </div>
+      <div class="field row2">
+        <div>
+          <label>Tamanho título</label>
+          <div class="range-row">
+            <input type="range" min="20" max="80" value="52" id="rng-titlesize" oninput="syncRange(this,'lbl-titlesize');render()">
+            <span class="range-val" id="lbl-titlesize">52</span>
+          </div>
+        </div>
+        <div>
+          <label>Tamanho caixas</label>
+          <div class="range-row">
+            <input type="range" min="30" max="90" value="0" id="rng-boxsize" oninput="syncRange(this,'lbl-boxsize');render()">
+            <span class="range-val" id="lbl-boxsize">Auto</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Cores</div>
+      <div class="field">
+        <label>Fundo</label>
+        <div class="color-row">
+          <input type="color" id="col-bg" value="#dcd7f0" oninput="syncColor(this,'hex-bg');render()">
+          <input type="text" class="color-hex" id="hex-bg" value="#dcd7f0" oninput="syncHex(this,'col-bg');render()" maxlength="7">
+        </div>
+      </div>
+      <div class="field">
+        <label>Título e texto</label>
+        <div class="color-row">
+          <input type="color" id="col-text" value="#37296e" oninput="syncColor(this,'hex-text');render()">
+          <input type="text" class="color-hex" id="hex-text" value="#37296e" oninput="syncHex(this,'col-text');render()" maxlength="7">
+        </div>
+      </div>
+      <div class="field">
+        <label>Caixas (fundo)</label>
+        <div class="color-row">
+          <input type="color" id="col-box" value="#f5f3ff" oninput="syncColor(this,'hex-box');render()">
+          <input type="text" class="color-hex" id="hex-box" value="#f5f3ff" oninput="syncHex(this,'col-box');render()" maxlength="7">
+        </div>
+      </div>
+      <div class="field">
+        <label>Bordas das caixas</label>
+        <div class="color-row">
+          <input type="color" id="col-border" value="#aaa0d2" oninput="syncColor(this,'hex-border');render()">
+          <input type="text" class="color-hex" id="hex-border" value="#aaa0d2" oninput="syncHex(this,'col-border');render()" maxlength="7">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Temas rápidos</label>
+        <div class="emoji-presets" id="theme-chips"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Emojis do código</div>
+      <div class="field">
+        <label>Conjunto pré-definido</label>
+        <div class="emoji-presets" id="emoji-chips"></div>
+      </div>
+      <div class="field" style="margin-top:10px">
+        <label>Editar manualmente (A→Z)</label>
+        <div class="emoji-grid" id="emoji-grid"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Decoração</div>
+      <div class="field">
+        <label>Emojis do topo/fundo</label>
+        <input type="text" id="inp-border-emojis" value="🌟 🎵 🌈 ⚡ 🎯 ⚡ 🌈 🎵 🌟" oninput="render()" placeholder="separados por espaço">
+      </div>
+      <div class="field">
+        <label>Emojis do separador</label>
+        <input type="text" id="inp-div-emojis" value="💎 🔥 💧 🌙 ⭐ 🌙 💧 🔥 💎" oninput="render()" placeholder="separados por espaço">
+      </div>
+      <div class="field">
+        <label>Mostrar legenda (A-Z)</label>
+        <select id="sel-legend" onchange="render()">
+          <option value="1">Sim</option>
+          <option value="0">Não</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section" style="padding:14px;">
+      <div class="section-title">Exportar</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+        <button class="btn btn-format" onclick="doExport('png',1)">
+          <span class="fmt-icon">🖼</span>
+          <span class="fmt-label">PNG</span>
+          <span class="fmt-sub">150 dpi</span>
+        </button>
+        <button class="btn btn-format" onclick="doExport('png',2)">
+          <span class="fmt-icon">🖼</span>
+          <span class="fmt-label">PNG HQ</span>
+          <span class="fmt-sub">300 dpi</span>
+        </button>
+        <button class="btn btn-format btn-format-pdf" onclick="doExport('pdf',1)" style="grid-column:1/-1;">
+          <span class="fmt-icon">📄</span>
+          <span class="fmt-label">PDF A4</span>
+          <span class="fmt-sub">pronto a imprimir</span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PREVIEW -->
+  <div class="preview-area">
+    <div class="preview-toolbar">
+      <button class="zoom-btn" onclick="zoom(-0.1)">−</button>
+      <button class="zoom-btn" onclick="zoom(0.1)">+</button>
+      <button class="zoom-btn" onclick="zoomFit()" title="Ajustar">⊡</button>
+      <span id="zoom-label">100%</span>
+      <span style="text-align:right">Pré-visualização ao vivo • clica em Descarregar para salvar</span>
+    </div>
+    <div id="canvas-wrap">
+      <canvas id="c"></canvas>
+    </div>
+    <div class="export-note">A imagem exportada é A4 a 150dpi (1240×1754px)</div>
+  </div>
+
+</div>
+
+<script>
+// ─── EMOJI SETS ───────────────────────────────────────────────────────────────
+const EMOJI_SETS = {
+  'Animais': ['🐶','🐱','🐸','🦊','🐼','🦁','🐯','🐻','🐨','🐙','🦋','🌈','⚡','🔥','💧','🌸','🍀','🌙','⭐','☀️','🎵','🎸','🎯','🎲','🏆','💎'],
+  'Frutas':  ['🍎','🍊','🍋','🍇','🍓','🫐','🍑','🥭','🍍','🥝','🍒','🫒','🥑','🍆','🥕','🌽','🍄','🧅','🥜','🌶️','🫑','🥦','🥬','🫛','🍞','🧄'],
+  'Objetos': ['🎈','🎀','🎁','🔑','💡','📚','✏️','🎨','🔭','🎭','🎪','🎬','🎤','🎧','🎮','🕹️','🧩','♟️','🎯','🎲','🃏','🎴','🀄','🎰','🚀','🛸'],
+  'Rostos':  ['😀','😂','🥰','😎','🤩','😴','🤔','😤','🥳','😱','🤗','😏','🧐','🤓','😇','🥺','😍','🤯','😵','🤠','🥸','😬','🤭','🫣','🤫','😶'],
+  'Coração': ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💖','💗','💓','💞','💕','❣️','💝','💘','💟','♥️','🫀','💔','❤️‍🔥','❤️‍🩹','💌','🏹','✨'],
+};
+
+const THEME_PRESETS = {
+  'Lavanda':  { bg:'#dcd7f0', text:'#37296e', box:'#f5f3ff', border:'#aaa0d2' },
+  'Menta':    { bg:'#d4edda', text:'#1a4731', box:'#f0fff4', border:'#88c9a0' },
+  'Pêssego':  { bg:'#fde8d8', text:'#7a3010', box:'#fff7f0', border:'#f0a880' },
+  'Azul':     { bg:'#d0e8f8', text:'#0c3560', box:'#f0f8ff', border:'#80b8e8' },
+  'Rosa':     { bg:'#fce4ec', text:'#880e4f', box:'#fff0f5', border:'#f48fb1' },
+  'Amarelo':  { bg:'#fffde7', text:'#4a3700', box:'#fffff0', border:'#f0d060' },
+  'Cinza':    { bg:'#eceff1', text:'#263238', box:'#fafafa', border:'#b0bec5' },
+  'Escuro':   { bg:'#1a1a2e', text:'#e0d0ff', box:'#2a2a4e', border:'#5040a0' },
+};
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let currentEmojis = [...EMOJI_SETS['Animais']];
+let currentZoom = 0.45;
+
+// ─── INIT EMOJI GRID ──────────────────────────────────────────────────────────
+function buildEmojiGrid() {
+  const g = document.getElementById('emoji-grid');
+  g.innerHTML = '';
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach((l, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'emoji-cell';
+    cell.innerHTML = `<span>${l}</span><input type="text" maxlength="4" value="${currentEmojis[i]}" oninput="currentEmojis[${i}]=this.value;render()">`;
+    g.appendChild(cell);
+  });
+}
+
+function buildChips() {
+  // Theme chips
+  const tc = document.getElementById('theme-chips');
+  tc.innerHTML = '';
+  Object.keys(THEME_PRESETS).forEach(name => {
+    const chip = document.createElement('button');
+    chip.className = 'preset-chip';
+    chip.textContent = name;
+    chip.onclick = () => applyTheme(name);
+    tc.appendChild(chip);
+  });
+
+  // Emoji chips
+  const ec = document.getElementById('emoji-chips');
+  ec.innerHTML = '';
+  Object.keys(EMOJI_SETS).forEach((name, i) => {
+    const chip = document.createElement('button');
+    chip.className = 'preset-chip' + (i === 0 ? ' active' : '');
+    chip.textContent = name;
+    chip.onclick = () => applyEmojiSet(name, chip);
+    ec.appendChild(chip);
+  });
+}
+
+function applyTheme(name) {
+  const t = THEME_PRESETS[name];
+  document.getElementById('col-bg').value = t.bg;     document.getElementById('hex-bg').value = t.bg;
+  document.getElementById('col-text').value = t.text;  document.getElementById('hex-text').value = t.text;
+  document.getElementById('col-box').value = t.box;    document.getElementById('hex-box').value = t.box;
+  document.getElementById('col-border').value = t.border; document.getElementById('hex-border').value = t.border;
+  render();
+}
+
+function applyEmojiSet(name, chip) {
+  currentEmojis = [...EMOJI_SETS[name]];
+  document.querySelectorAll('#emoji-chips .preset-chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  buildEmojiGrid();
+  render();
+}
+
+function syncRange(el, lblId) {
+  document.getElementById(lblId).textContent = el.id === 'rng-boxsize' && +el.value === 0 ? 'Auto' : el.value;
+}
+
+function syncColor(picker, hexId) {
+  document.getElementById(hexId).value = picker.value;
+}
+function syncHex(hexIn, pickId) {
+  if (/^#[0-9a-fA-F]{6}$/.test(hexIn.value))
+    document.getElementById(pickId).value = hexIn.value;
+}
+
+// ─── CANVAS RENDER ────────────────────────────────────────────────────────────
+const A4W = 1240, A4H = 1754;
+
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return [r,g,b];
+}
+
+function roundRect(ctx, x, y, w, h, r, fill, stroke, sw=2) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y);
+  ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r);
+  ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h);
+  ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r);
+  ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = sw; ctx.stroke(); }
+}
+
+function drawEmojiAt(ctx, emoji, cx, cy, size) {
+  if (!emoji) return;
+  ctx.font = `${size}px serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(emoji, cx, cy);
+}
+
+function buildLines(message, maxPerRow) {
+  const words = message.toUpperCase().split(' ');
+  const lines = []; let cur = [];
+  for (const word of words) {
+    const letters = word.split('').map(ch => ({ ch, emoji: currentEmojis['ABCDEFGHIJKLMNOPQRSTUVWXYZ'.indexOf(ch)] ?? null }));
+    const need = letters.length + (cur.length ? 1 : 0);
+    if (cur.length + need <= maxPerRow) {
+      if (cur.length) cur.push({ ch:' ', emoji:null });
+      cur.push(...letters);
+    } else {
+      if (cur.length) lines.push(cur);
+      cur = [...letters];
+    }
+  }
+  if (cur.length) lines.push(cur);
+  return lines;
+}
+
+function getSettings() {
+  return {
+    title:         document.getElementById('inp-title').value || 'MENSAGEM SECRETA',
+    message:       document.getElementById('inp-message').value || '',
+    bgColor:       document.getElementById('hex-bg').value,
+    textColor:     document.getElementById('hex-text').value,
+    boxColor:      document.getElementById('hex-box').value,
+    borderColor:   document.getElementById('hex-border').value,
+    titleSize:     +document.getElementById('rng-titlesize').value,
+    forcedBoxSize: +document.getElementById('rng-boxsize').value,
+    borderEmojis:  document.getElementById('inp-border-emojis').value.trim().split(/\s+/).filter(Boolean),
+    divEmojis:     document.getElementById('inp-div-emojis').value.trim().split(/\s+/).filter(Boolean),
+    showLegend:    document.getElementById('sel-legend').value === '1',
+  };
+}
+
+function renderToCanvas(canvas, scale=1) {
+  const cw = A4W * scale, ch = A4H * scale;
+  canvas.width = cw; canvas.height = ch;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(scale, scale);
+
+  const S = getSettings();
+  const margin = 52, cntW = A4W - 2*margin;
+
+  // Background
+  ctx.fillStyle = S.bgColor;
+  ctx.fillRect(0, 0, A4W, A4H);
+
+  // Subtle paper texture via noise
+  ctx.save();
+  ctx.globalAlpha = 0.03;
+  for (let i=0; i<4000; i++) {
+    const x=Math.random()*A4W, y=Math.random()*A4H;
+    ctx.fillStyle = Math.random() > 0.5 ? '#fff' : '#000';
+    ctx.fillRect(x,y,1.5,1.5);
+  }
+  ctx.restore();
+
+  // ── Layout math ──────────────────────────────────────────────────────────────
+  const FIXED_TOP      = 80;
+  const FIXED_TITLE    = S.titleSize + 26;
+  const FIXED_DIV      = 52;
+  const FIXED_LEG_LBL  = 36;
+  const FIXED_FOOTER   = 70;
+  const LBOX=48, LEMJ=32, LGAP=8, LCOLS=13, LROWS=2;
+  const LROW_H = LBOX + 14 + LEMJ + 10;
+  const FIXED_LEGEND   = S.showLegend ? LROW_H*LROWS + 28 + FIXED_LEG_LBL : 0;
+
+  const available = A4H - FIXED_TOP - FIXED_TITLE - FIXED_DIV - FIXED_LEGEND - FIXED_FOOTER - 60;
+
+  let BOX_SIZE, BOX_GAP, EMOJI_SZ, ROW_UNIT, lines, msg_h;
+  if (S.forcedBoxSize > 0) {
+    BOX_SIZE = S.forcedBoxSize;
+    BOX_GAP  = Math.max(5, Math.floor(BOX_SIZE/8));
+    EMOJI_SZ = Math.floor(BOX_SIZE * 0.84);
+    ROW_UNIT = BOX_SIZE + 14 + EMOJI_SZ + 16;
+    const maxR = Math.floor((cntW + BOX_GAP) / (BOX_SIZE + BOX_GAP));
+    lines = buildLines(S.message, maxR);
+    msg_h = lines.length * ROW_UNIT + 28;
+  } else {
+    for (BOX_SIZE = 80; BOX_SIZE >= 34; BOX_SIZE -= 2) {
+      BOX_GAP  = Math.max(5, Math.floor(BOX_SIZE/8));
+      EMOJI_SZ = Math.floor(BOX_SIZE * 0.84);
+      ROW_UNIT = BOX_SIZE + 14 + EMOJI_SZ + 16;
+      const maxR = Math.floor((cntW + BOX_GAP) / (BOX_SIZE + BOX_GAP));
+      lines = buildLines(S.message, maxR);
+      msg_h = lines.length * ROW_UNIT + 28;
+      if (msg_h <= available) break;
+    }
+  }
+
+  const totalH = FIXED_TOP + FIXED_TITLE + msg_h + 28 + FIXED_DIV + FIXED_LEGEND + FIXED_FOOTER;
+  let y = Math.max(0, Math.floor((A4H - totalH) / 2));
+
+  // ── TOP DECO ─────────────────────────────────────────────────────────────────
+  if (S.borderEmojis.length) {
+    const n = S.borderEmojis.length;
+    for (let i=0; i<n; i++) {
+      const ex = n===1 ? A4W/2 : margin + Math.round(i * cntW / (n-1));
+      drawEmojiAt(ctx, S.borderEmojis[i], ex, y+28, 30);
+    }
+  }
+  y += FIXED_TOP;
+
+  // ── TITLE ────────────────────────────────────────────────────────────────────
+  ctx.font = `900 ${S.titleSize}px 'Nunito', sans-serif`;
+  ctx.fillStyle = S.textColor;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText(S.title, A4W/2, y);
+  y += FIXED_TITLE;
+
+  // ── MESSAGE PANEL ─────────────────────────────────────────────────────────────
+  const panelTop = y - 8, panelBot = y + msg_h + 8;
+  const [br,bg_,bb] = hexToRgb(S.borderColor);
+  roundRect(ctx, margin-14, panelTop, cntW+28, panelBot-panelTop, 22,
+    `rgba(255,255,255,0.55)`, S.borderColor, 2);
+
+  let yCur = y + 10;
+  for (const line of lines) {
+    const n = line.length;
+    const lineW = n*(BOX_SIZE+BOX_GAP)-BOX_GAP;
+    const x0 = Math.floor((A4W - lineW)/2);
+
+    // Boxes
+    for (let i=0; i<n; i++) {
+      const {ch} = line[i];
+      if (ch === ' ') continue;
+      const bx = x0 + i*(BOX_SIZE+BOX_GAP);
+      roundRect(ctx, bx, yCur, BOX_SIZE, BOX_SIZE, 8, S.boxColor, S.borderColor, 2);
+    }
+
+    // Emojis
+    const ey = yCur + BOX_SIZE + 14;
+    for (let i=0; i<n; i++) {
+      const {ch, emoji} = line[i];
+      if (ch === ' ' || !emoji) continue;
+      const bx = x0 + i*(BOX_SIZE+BOX_GAP);
+      drawEmojiAt(ctx, emoji, bx+BOX_SIZE/2, ey+EMOJI_SZ/2, Math.floor(EMOJI_SZ*0.9));
+    }
+
+    yCur += ROW_UNIT;
+  }
+  y = panelBot + 14;
+
+  // ── DIVIDER ───────────────────────────────────────────────────────────────────
+  if (S.divEmojis.length) {
+    const n = S.divEmojis.length;
+    for (let i=0; i<n; i++) {
+      const ex = n===1 ? A4W/2 : margin + Math.round(i * cntW / (n-1));
+      drawEmojiAt(ctx, S.divEmojis[i], ex, y+18, 26);
+    }
+  }
+  y += FIXED_DIV;
+
+  // ── LEGEND ────────────────────────────────────────────────────────────────────
+  if (S.showLegend) {
+    ctx.font = `700 22px 'Nunito', sans-serif`;
+    ctx.fillStyle = S.textColor;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText('CÓDIGO SECRETO', A4W/2, y);
+    y += FIXED_LEG_LBL;
+
+    const legW = LCOLS*(LBOX+LGAP)-LGAP;
+    const legX0 = Math.floor((A4W - legW)/2);
+    const panelH = LROWS*LROW_H + 20;
+    roundRect(ctx, legX0-12, y-8, legW+24, panelH, 18,
+      'rgba(255,255,255,0.7)', S.borderColor, 1.5);
+
+    const alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    for (let i=0; i<26; i++) {
+      const col = i%LCOLS, row = Math.floor(i/LCOLS);
+      const lx = legX0 + col*(LBOX+LGAP);
+      const ly = y + row*LROW_H + 8;
+
+      roundRect(ctx, lx, ly, LBOX, LBOX, 6, 'rgba(255,255,255,0.9)', S.borderColor, 1);
+      ctx.font = `700 18px 'Nunito', sans-serif`;
+      ctx.fillStyle = S.textColor;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(alpha[i], lx+LBOX/2, ly+LBOX/2);
+
+      drawEmojiAt(ctx, currentEmojis[i], lx+LBOX/2, ly+LBOX+8+LEMJ/2, Math.floor(LEMJ*0.9));
+    }
+    y += panelH;
+  }
+
+  // ── FOOTER ────────────────────────────────────────────────────────────────────
+  if (S.borderEmojis.length) {
+    const n = S.borderEmojis.length;
+    for (let i=0; i<n; i++) {
+      const ex = n===1 ? A4W/2 : margin + Math.round(i * cntW / (n-1));
+      drawEmojiAt(ctx, S.borderEmojis[i], ex, A4H-42, 30);
+    }
+  }
+}
+
+// ─── PREVIEW ─────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+
+function render() {
+  const wrap = document.getElementById('canvas-wrap');
+  const displayW = Math.round(A4W * currentZoom);
+  const displayH = Math.round(A4H * currentZoom);
+  wrap.style.width  = displayW + 'px';
+  wrap.style.height = displayH + 'px';
+  canvas.style.width  = displayW + 'px';
+  canvas.style.height = displayH + 'px';
+  renderToCanvas(canvas, 1);
+}
+
+function zoom(delta) {
+  currentZoom = Math.min(1.5, Math.max(0.15, currentZoom + delta));
+  document.getElementById('zoom-label').textContent = Math.round(currentZoom*100) + '%';
+  render();
+}
+
+function zoomFit() {
+  const area = document.querySelector('.preview-area');
+  const fitW = (area.clientWidth - 80) / A4W;
+  const fitH = (area.clientHeight - 80) / A4H;
+  currentZoom = Math.min(fitW, fitH, 1.5);
+  document.getElementById('zoom-label').textContent = Math.round(currentZoom*100) + '%';
+  render();
+}
+
+// ─── EXPORT ──────────────────────────────────────────────────────────────────
+function doExport(format, scale) {
+  // Mostra feedback visual
+  showToast('A preparar o ' + format.toUpperCase() + '...');
+
+  // Espera um bocadinho para a UI renderizar o toast antes de bloquear a thread
+  setTimeout(() => {
+    const exp = document.createElement('canvas');
+    renderToCanvas(exp, scale);
+    
+    // Gera um nome seguro baseado no título
+    const title = (document.getElementById('inp-title').value || 'mensagem_secreta').toLowerCase().replace(/\s+/g,'_');
+
+    if (format === 'png') {
+      const link = document.createElement('a');
+      link.download = `${title}_${scale === 1 ? 'a4' : 'hq'}.png`;
+      link.href = exp.toDataURL('image/png');
+      link.click();
+      showToast('PNG descarregado!');
+      
+    } else if (format === 'pdf') {
+      const { jsPDF } = window.jspdf;
+      // Cria um documento A4 em formato "portrait" (retrato)
+      const doc = new jsPDF('p', 'mm', 'a4');
+      
+      const imgData = exp.toDataURL('image/png', 1.0);
+      
+      // A4 tem 210 x 297 mm
+      doc.addImage(imgData, 'PNG', 0, 0, 210, 297);
+      doc.save(`${title}.pdf`);
+      showToast('PDF descarregado!');
+    }
+  }, 50);
+}
+
+function showToast(msg) {
+  const toastEl = document.getElementById('toast');
+  if (!toastEl) return;
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  
+  // Esconde o aviso após 3 segundos
+  setTimeout(() => {
+    toastEl.classList.remove('show');
+  }, 3000);
+}
+
+// ─── BOOT ────────────────────────────────────────────────────────────────────
+buildChips();
+buildEmojiGrid();
+// Set initial range labels
+syncRange(document.getElementById('rng-titlesize'), 'lbl-titlesize');
+syncRange(document.getElementById('rng-boxsize'),   'lbl-boxsize');
+zoomFit();
+
+window.addEventListener('resize', zoomFit);
+</script>
+<div id="toast" class="toast">Exportado com sucesso!</div>  
+</body>
+</html>
